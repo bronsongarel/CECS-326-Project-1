@@ -9,7 +9,7 @@
 
 #define BUFFER_SIZE 10
 
-int main(int argc, char *argv[])
+void child(void)
 {
     // Your code is here
 }
