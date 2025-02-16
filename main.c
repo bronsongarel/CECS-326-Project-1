@@ -1,10 +1,8 @@
 #include <windows.h>
 #include <stdio.h>
-
-
-
 #define BUFFER_SIZE 4096  // Buffer size for reading/writing
 #define STRING_SIZE 25
+
 void FileCopy(HANDLE pipeWriteEnd, const char *sourceFile);
 void child(HANDLE pipeReadEnd, const char *outputFile);
 
