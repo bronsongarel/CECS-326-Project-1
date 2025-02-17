@@ -34,7 +34,41 @@ int main(int argc, char *argv[]) {
         return 0;
     }
 
+
+   // Ensure the read handle is inherited by the child process
+    SetHandleInformation(&pipeReadEnd, HANDLE_FLAG_INHERIT, HANDLE_FLAG_INHERIT);
     FileCopy(pipeWriteEnd, argv[1]);      // Write file contents to the pipe
+
+    // Prepare process information
+    PROCESS_INFORMATION pi;
+    STARTUPINFO si;
+    ZeroMemory(&pi, sizeof(pi));
+    ZeroMemory(&si, sizeof(si));
+    si.cb = sizeof(si);
+
+    // Redirect child's standard input to the read end of the pipe
+    si.dwFlags = STARTF_USESTDHANDLES;
+    si.hStdInput = pipeReadEnd;
+    si.hStdOutput = pipeWriteEnd;
+    si.hStdError = GetStdHandle(STD_ERROR_HANDLE);
+
+    // Create the child process
+    char cmd[512];
+    snprintf(cmd, sizeof(cmd), "cmd /c more > \"%s\"", argv[2]);
+    if (!CreateProcess(NULL, cmd,  NULL, NULL, TRUE, CREATE_NO_WINDOW, NULL, NULL, &si, &pi)) {
+        printf("Error creating process (%d)\n", GetLastError());
+        return 1;
+    }
+
+    // Close the read pipe in the parent (not needed)
+    //CloseHandle(pipeReadEnd);
+
+
+
+
+
+
+    
     CloseHandle(pipeWriteEnd);            // Close the write end of the pipe before reading
     child(pipeReadEnd, argv[2]);          // Read from the pipe and write to output file
     CloseHandle(pipeReadEnd);             // Close the read end of the pipe
