@@ -1,5 +1,8 @@
 #include <windows.h>
 #include <stdio.h>
+#include "time.h"
+
+
 #define BUFFER_SIZE 4096  // Buffer size for reading/writing
 
 //FileCopy will take in the write end of the pipe as well as source.txt as inputs 
@@ -11,6 +14,11 @@ void FileCopy(HANDLE pipeWriteEnd, const char *sourceFile);
 void child(HANDLE pipeReadEnd, const char *outputFile);
 
 int main(int argc, char *argv[]) {
+
+    clock_t start, end;
+    double tot;
+
+    start = clock();
     if(argc < 3){    //Check if there were less than two files passed                  
         perror("Error with text files passed to command line, too few");
         return 1;
@@ -26,12 +34,19 @@ int main(int argc, char *argv[]) {
         return 0;
     }
 
-     FileCopy(pipeWriteEnd, argv[1]);      // Write file contents to the pipe
-     CloseHandle(pipeWriteEnd);            // Close the write end of the pipe before reading
-     child(pipeReadEnd, argv[2]);          // Read from the pipe and write to output file
-     CloseHandle(pipeReadEnd);             // Close the read end of the pipe
-     printf("source.txt successfully copied through the pipe and into output.txt!\n");
-     return 0;
+    FileCopy(pipeWriteEnd, argv[1]);      // Write file contents to the pipe
+    CloseHandle(pipeWriteEnd);            // Close the write end of the pipe before reading
+    child(pipeReadEnd, argv[2]);          // Read from the pipe and write to output file
+    CloseHandle(pipeReadEnd);             // Close the read end of the pipe
+    printf("source.txt successfully copied through the pipe and into output.txt!\n");
+
+    end = clock();
+
+    tot = ((double) (end - start)) / CLOCKS_PER_SEC;
+
+    printf("Time taken: %f seconds\n", tot);
+
+    return 0;
  }
 
  void FileCopy(HANDLE pipeWriteEnd, const char *sourceFile){ 
