@@ -1,8 +1,3 @@
-Hi this is a long message to test the program.  
-I want to play POE right now but I have to study for a 347 midterm. (1)
+, this is a message to test the program. I hope your day is going well.  
 The Chicago Bears will win Super Bowl Sixty, I hope. (2) 
-Why is there always 4dps, sometimes 5 on my team, I cant go groot every game. (3) 
-This 347 project doesn't work, I hope she likes it! (4)
-Empty Line Test (5)
-End of File
-Sike
+
