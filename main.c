@@ -2,7 +2,6 @@
 #include <stdio.h>
 #include "time.h"
 
-
 #define BUFFER_SIZE 4096  // Buffer size for reading/writing
 
 //FileCopy will take in the write end of the pipe as well as source.txt as inputs 
@@ -15,72 +14,65 @@ void child(HANDLE pipeReadEnd, const char *outputFile);
 
 int main(int argc, char *argv[]) {
 
-    clock_t start, end;
-    double tot;
+   clock_t start, end;
+   double time_elapsed;
 
-    start = clock();
-    if(argc < 3){    //Check if there were less than two files passed                  
-        perror("Error with text files passed to command line, too few");
-        return 1;
-    }
-    if(argc > 3){    //Check if there were more than two files passed                  
-        perror("Error with text files passed to command line, too many");
-        return 1;
-    }
-    HANDLE pipeReadEnd, pipeWriteEnd;  //handles for reading and writing to our pipe
-    SECURITY_ATTRIBUTES security = { sizeof(SECURITY_ATTRIBUTES), NULL, TRUE };  // Allows inheritance
-    if(!CreatePipe(&pipeReadEnd, &pipeWriteEnd, &security, BUFFER_SIZE)){ 
-        perror("The Pipe was not Created");
-        return 0;
-    }
+   start = clock();
 
+   if(argc < 3){    //Check if there were less than two files passed                  
+      perror("Error with text files passed to command line, too few");
+      return 1;
+   }
+
+   if(argc > 3){    //Check if there were more than two files passed                  
+      perror("Error with text files passed to command line, too many");
+      return 1;
+   }
+
+   /*------------- Write Input File to Pipe -------------*/
+   HANDLE readEnd, writeEnd;  //handles for reading and writing to our pipe
+   SECURITY_ATTRIBUTES security = { sizeof(SECURITY_ATTRIBUTES), NULL, TRUE };  // Allows inheritance
+   if(!CreatePipe(&readEnd, &writeEnd, &security, BUFFER_SIZE)){ 
+      perror("The Pipe was not Created");
+      return 0;
+   }
 
    // Ensure the read handle is inherited by the child process
-    SetHandleInformation(&pipeReadEnd, HANDLE_FLAG_INHERIT, HANDLE_FLAG_INHERIT);
-    FileCopy(pipeWriteEnd, argv[1]);      // Write file contents to the pipe
+   SetHandleInformation(&readEnd, HANDLE_FLAG_INHERIT, HANDLE_FLAG_INHERIT);
+   FileCopy(writeEnd, argv[1]);      // Write file contents to the pipe
 
-    // Prepare process information
-    PROCESS_INFORMATION pi;
-    STARTUPINFO si;
-    ZeroMemory(&pi, sizeof(pi));
-    ZeroMemory(&si, sizeof(si));
-    si.cb = sizeof(si);
+   // Prepare process information
+   PROCESS_INFORMATION pi;
+   STARTUPINFO si;
+   ZeroMemory(&pi, sizeof(pi));
+   ZeroMemory(&si, sizeof(si));
+   si.cb = sizeof(si);
 
-    // Redirect child's standard input to the read end of the pipe
-    si.dwFlags = STARTF_USESTDHANDLES;
-    si.hStdInput = pipeReadEnd;
-    si.hStdOutput = pipeWriteEnd;
-    si.hStdError = GetStdHandle(STD_ERROR_HANDLE);
+   // Redirect child's standard input to the read end of the pipe
+   si.dwFlags = STARTF_USESTDHANDLES;
+   si.hStdInput = readEnd;
+   si.hStdOutput = writeEnd;
+   si.hStdError = GetStdHandle(STD_ERROR_HANDLE);
 
-    // Create the child process
-    char cmd[512];
-    snprintf(cmd, sizeof(cmd), "cmd /c more > \"%s\"", argv[2]);
-    if (!CreateProcess(NULL, cmd,  NULL, NULL, TRUE, CREATE_NO_WINDOW, NULL, NULL, &si, &pi)) {
-        printf("Error creating process (%d)\n", GetLastError());
-        return 1;
-    }
+   /*------------- Read From Pipe Write to Output File -------------*/
+   char cmd[512];
+   snprintf(cmd, sizeof(cmd), "cmd /c more > \"%s\"", argv[2]);
+   if (!CreateProcess(NULL, cmd,  NULL, NULL, TRUE, CREATE_NO_WINDOW, NULL, NULL, &si, &pi)) {
+      printf("Error creating process (%d)\n", GetLastError());
+      return 1;
+   }
 
-    // Close the read pipe in the parent (not needed)
-    //CloseHandle(pipeReadEnd);
+   CloseHandle(writeEnd);            // Close the write end of the pipe before reading
+   child(readEnd, argv[2]);          // Read from the pipe and write to output file
+   CloseHandle(readEnd);             // Close the read end of the pipe
+   printf("File successfully copied through the pipe and into destination file!\n");
 
+   /*------------- Calculate Compilation Time -------------*/
+   end = clock(); 
+   time_elapsed = ((double) (end - start)) / CLOCKS_PER_SEC;
+   printf("Time taken: %f seconds\n", time_elapsed);
 
-
-
-
-
-    
-    CloseHandle(pipeWriteEnd);            // Close the write end of the pipe before reading
-    child(pipeReadEnd, argv[2]);          // Read from the pipe and write to output file
-    CloseHandle(pipeReadEnd);             // Close the read end of the pipe
-    printf("source.txt successfully copied through the pipe and into output.txt!\n");
-
-    end = clock();
-
-    tot = ((double) (end - start)) / CLOCKS_PER_SEC;
-
-    printf("Time taken: %f seconds\n", tot);
-
-    return 0;
+   return 0;
  }
 
  void FileCopy(HANDLE pipeWriteEnd, const char *sourceFile){ 
